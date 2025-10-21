@@ -27,7 +27,7 @@ const negocios = [
     nombre: "Kmili",
     descripcion: "Pastelera: Camila Fernandez",
     telefono: "1148889873",
-    instagram: "cookieskmili",
+    instagram: "cookieskmill",
     logo: "/kmill.png",
     tipo: "Pastelería y Confitería",
   },

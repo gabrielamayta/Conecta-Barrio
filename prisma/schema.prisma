@@ -5,7 +5,7 @@ generator client {
 
 // 2. Configuración de la fuente de datos (Asegúrate que el provider sea el correcto)
 datasource db {
-  provider = "sqlite" // O "sqlite", "mysql", etc.
+  provider = "sqlite" // Asegúrate de que esto coincida con tu base de datos
   url      = env("DATABASE_URL") 
 }
 
@@ -18,7 +18,6 @@ enum UserRole {
 
 // 4. MODELO User
 model User {
-  // Campos básicos (ID, fechas)
   id            String   @id @default(uuid())
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -34,6 +33,24 @@ model User {
   // Perfil
   role          UserRole  @default(VECINO) 
   
-  // Puedes añadir una relación futura aquí, por ahora vacío
+  // Relación con los tokens de restablecimiento de contraseña
+  passwordResetTokens PasswordResetToken[] 
+  
+  // Puedes añadir otras relaciones futuras aquí
   // posts         Post[]
+}
+
+// 5. MODELO PasswordResetToken (PARA "Olvidaste tu contraseña")
+model PasswordResetToken {
+  id        String   @id @default(uuid()) // Identificador único del token en la DB
+  userId    String   // ID del usuario al que pertenece el token
+  token     String   @unique // El token de seguridad real que va en el enlace
+  expiresAt DateTime // La fecha y hora en que el token deja de ser válido
+  createdAt DateTime @default(now()) // Fecha de creación
+
+  // Relación con el modelo User
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Índice para optimizar búsquedas por ID de usuario
+  @@index([userId])
 }

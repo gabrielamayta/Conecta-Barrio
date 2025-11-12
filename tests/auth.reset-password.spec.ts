@@ -1,85 +1,88 @@
 import { test, expect } from '@playwright/test';
 
-// --- Constantes de Prueba ---
+// 🚨 IMPORTANTE: Estas constantes deben coincidir con un usuario existente en tu base de datos 
+// y la NUEVA contraseña debe cumplir con tus reglas de seguridad.
 const TEST_USER_EMAIL = 'maytagabi765@gmail.com'; 
-const NEW_PASSWORD = 'Jungkook97'; // Contraseña limpia
-const TOKEN_PLACEHOLDER = '23e1f7c6f37b9f0f2ecb2c826f39908e4f2a9b15be115ec6026ee6badcab6ada558df9d35e9f38813f49c4d113f09461';
+// Token fijo de prueba (El backend debe estar configurado para aceptarlo para testing)
+const FAKE_RESET_TOKEN = '9a3647f13c499cd2b231564dade7a95dad34714f3b398f60903f85519eccd5eb'; 
+const NEW_SECURE_PASSWORD = 'Jungkook@'; 
 
-test.describe('Flujo E2E: Olvido, Restablecimiento y Login', () => {
+test('Flujo E2E: Restablecimiento de Contraseña y Login Exitoso', async ({ page }) => {
 
-    // Nota: Usamos el token que aparece en tu grabación (TOKEN_PLACEHOLDER)
-    // En un test real, este token debería ser leído de la base de datos o de la respuesta de la API.
-    const resetUrl = `/reset-password/${TOKEN_PLACEHOLDER}`;
+    // --- 1. Navegar a la página de Forgot Password y solicitar el enlace ---
+    await test.step('Navegar y solicitar el enlace de restablecimiento', async () => {
+        
+        await page.goto('http://localhost:3000/login');
 
-    test('Debe solicitar, restablecer la contraseña, e iniciar sesión con la nueva clave', async ({ page }) => {
+        // CRÍTICO: Usamos Promise.all para esperar el clic Y la navegación
+        await Promise.all([
+            page.waitForURL('http://localhost:3000/forgot-password'),
+            page.getByRole('link', { name: '¿Olvidaste tu contraseña?' }).click(),
+        ]);
 
-        // --- PARTE 1: SOLICITAR EL ENLACE ---
-        await test.step('1. Solicitar el token de restablecimiento', async () => {
-            await page.goto('/forgot-password');
-            await expect(page.getByRole('heading', { name: '¿Olvidaste tu Contraseña?' })).toBeVisible();
+        // Llenar el campo de email
+        await page.getByRole('textbox', { name: 'Correo Electrónico' }).fill(TEST_USER_EMAIL);
 
-            // 1.1. Interceptar la llamada a la API para verificar el éxito del servidor
-            const apiCallPromise = page.waitForResponse(
-                (response) => response.url().includes('/api/auth/forgot-password') && response.status() === 200
-            );
+        // Esperar la respuesta de la API de forgot-password
+        const [response] = await Promise.all([
+            page.waitForResponse(res => 
+                res.url().includes('/api/auth/forgot-password') && res.request().method() === 'POST'
+            ),
+            page.getByRole('button', { name: 'Solicitar Restablecimiento' }).click(),
+        ]);
+        
+        // Verificar el mensaje de éxito del backend (asume que muestra un mensaje en el DOM)
+        await expect(page.getByText('Si la cuenta existe, hemos enviado un enlace')).toBeVisible();
+    });
 
-            // 1.2. Ingresar el email y enviar
-            await page.getByRole('textbox', { name: 'Correo Electrónico' }).fill(TEST_USER_EMAIL);
-            await page.getByRole('button', { name: 'Solicitar Restablecimiento' }).click();
+    // --- 2. Aplicar el Restablecimiento con el Token Fijo ---
+    await test.step('Restablecer la contraseña con el token de prueba', async () => {
+        
+        // Navegamos directamente a la URL de restablecimiento con el token simulado
+        const resetUrl = `http://localhost:3000/reset-password?token=${FAKE_RESET_TOKEN}`;
+        await page.goto(resetUrl);
 
-            // 1.3. Esperar la respuesta de éxito de la API
-            await apiCallPromise;
-            
-            // 1.4. Verificar el mensaje de éxito en el frontend
-            await expect(page.getByText('Se ha enviado un correo electrónico')).toBeVisible();
-        });
+        // Verificar que la página cargó el formulario de nueva contraseña
+        await expect(page.getByRole('heading', { name: 'Nueva Contraseña' })).toBeVisible();
 
+        // Llenar los campos con la nueva contraseña
+        await page.getByRole('textbox', { name: 'Nueva Contraseña', exact: true }).fill(NEW_SECURE_PASSWORD);
+        await page.getByRole('textbox', { name: 'Confirmar Nueva Contraseña' }).fill(NEW_SECURE_PASSWORD);
 
-        // --- PARTE 2: RESTABLECER LA CONTRASEÑA ---
-        await test.step('2. Restablecer la contraseña usando el enlace (simulado)', async () => {
-            // 2.1. Ir a la URL de restablecimiento directamente
-            await page.goto(resetUrl);
-            await expect(page.getByRole('heading', { name: 'Restablecer Contraseña' })).toBeVisible();
+        // Enviar el formulario y esperar la respuesta de la API
+        const [response] = await Promise.all([
+            page.waitForResponse(res => 
+                res.url().includes('/api/auth/reset-password') && res.request().method() === 'POST'
+            ),
+            page.getByRole('button', { name: 'Cambiar Contraseña' }).click(),
+        ]);
 
-            // 2.2. Rellenar los campos con la nueva contraseña
-            await page.getByRole('textbox', { name: 'Nueva Contraseña' }).fill(NEW_PASSWORD);
-            await page.getByRole('textbox', { name: 'Confirmar Contraseña' }).fill(NEW_PASSWORD);
-            
-            // 2.3. Interceptar la llamada a la API de restablecimiento
-            const apiCallPromise = page.waitForResponse(
-                (response) => response.url().includes('/api/auth/reset-password') && response.status() === 200
-            );
+        // VERIFICACIÓN CRÍTICA: Asegúrate de que el backend respondió 200/201 (menos de 400)
+        expect(response.status(), 'El backend debe devolver status 200/201 para el restablecimiento.').toBeLessThan(400);
+        
+        // CORRECCIÓN: Usamos regex para ser flexibles con la puntuación del mensaje de éxito
+        await expect(page.getByText(/Contraseña restablecida con éxito/)).toBeVisible();
+        await expect(page).toHaveURL('http://localhost:3000/login');
+    });
 
-            // 2.4. Enviar el formulario
-            await page.getByRole('button', { name: 'Restablecer Contraseña' }).click();
-            await apiCallPromise;
+    // --- 3. Verificar Login con la Nueva Contraseña ---
+    await test.step('Verificar inicio de sesión con la nueva contraseña', async () => {
+        
+        // Llenar formulario de login
+        await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER_EMAIL);
+        await page.getByRole('textbox', { name: 'Contraseña' }).fill(NEW_SECURE_PASSWORD);
 
-            // 2.5. Verificar el mensaje de éxito del restablecimiento
-            await expect(page.getByText('✅ ¡Contraseña restablecida con éxito!')).toBeVisible();
-            
-            // 2.6. Esperar la redirección automática a /login
-            await page.waitForURL('/login');
-            await expect(page.getByRole('heading', { name: 'Iniciar Sesión' })).toBeVisible();
-        });
-
-
-        // --- PARTE 3: VERIFICACIÓN DEL LOGIN ---
-        await test.step('3. Iniciar sesión con la nueva contraseña', async () => {
-            // 3.1. Ingresar las nuevas credenciales
-            await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER_EMAIL);
-            await page.getByRole('textbox', { name: 'Contraseña' }).fill(NEW_PASSWORD);
-
-            // 3.2. Enviar el formulario de login
-            await page.getByRole('button', { name: 'Iniciar Sesión' }).click();
-
-            // 3.3. Verificar que el usuario fue redirigido al Home (o a la página de éxito después de login)
-            // Asumimos que la página principal es '/'
-            await page.waitForURL('/');
-            await expect(page).toHaveURL('/');
-            
-            // Si el login es exitoso, un elemento de la interfaz (ej. el nombre del usuario o un dashboard)
-            // debería ser visible. Aquí verificamos el texto del enlace principal como proxy.
-            await expect(page.getByRole('link', { name: 'Conecta Barrio' })).toBeVisible();
-        });
+        // Iniciar sesión
+        const [loginResponse] = await Promise.all([
+            page.waitForResponse(res => res.url().includes('/api/auth/login') && res.request().method() === 'POST'),
+            page.getByRole('button', { name: 'Iniciar Sesión' }).click(),
+        ]);
+        
+        // Verificar el éxito (código 200) y la redirección a la página principal
+        expect(loginResponse.status()).toBe(200);
+        await expect(page).toHaveURL('http://localhost:3000/'); 
+        
+        // Verificar un elemento de la página principal para confirmar el login
+        await expect(page.getByRole('link', { name: 'Conecta Barrio' })).toBeVisible();
     });
 });

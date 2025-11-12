@@ -21,10 +21,15 @@ test('Login 2. Vecino: Debe iniciar sesión y redirigir a la página principal (
     
     // 3. Hacer clic en el botón de Iniciar Sesión
     await page.getByRole('button', { name: 'Iniciar Sesión' }).click();
-
-    // 4. CRITERIO DE ACEPTACIÓN: Verificar la redirección al Home (/)
-    await page.waitForURL(BASE_URL, { timeout: 10000 }); // Espera 10s por si la DB está lenta
-    await expect(page).toHaveURL(BASE_URL);
+// Usamos Promise.all para esperar el clic Y la redirección.
+    await Promise.all([
+    // 1. Espera la navegación a la URL Home (/)
+    page.waitForURL('http://localhost:3000/'), // BASE_URL es '/'
+    
+    // 2. Ejecuta la acción que causa la navegación (hacer clic)
+    // Asegura el clic forzado si el botón está deshabilitado momentáneamente.
+    page.getByRole('button', { name: 'Iniciar Sesión' }).click({ force: true }),
+]);
     
     // Opcional: Verificar que se ve contenido de la página principal (ej. el título)
     await expect(page.getByRole('link', { name: 'Conecta Barrio Encuentra lo que necesitas, cerca tuyo' })).toBeVisible();

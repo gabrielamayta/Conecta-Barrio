@@ -1,14 +1,25 @@
-// app/registro/page.tsx
-
 "use client"; // Marca este archivo como un componente de cliente para usar Hooks
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation'; // Hook para la redirección
 
-// Helper para una validación de seguridad simple en el frontend
+// Helper: Validación de seguridad de contraseña - SINCRONIZADA CON EL BACKEND
 const isPasswordSecure = (password: string): boolean => {
-    // Debe coincidir con la lógica del backend: 8 caracteres, mayúscula, minúscula, número, símbolo.
-    return password.length >= 8; 
+    // Criterio del backend: 8 caracteres, mayúscula, minúscula, número, símbolo.
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasDigit = /[0-9]/.test(password);
+    // Asegúrate de que esta regex cubra todos los símbolos que usas en el backend
+    const hasSymbol = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password); 
+
+    return (
+        password.length >= minLength &&
+        hasUpperCase &&
+        hasLowerCase &&
+        hasDigit &&
+        hasSymbol
+    );
 };
 
 
@@ -58,15 +69,14 @@ export default function RegistroComerciantePage() {
             return;
         }
 
-        // 3. Validación de seguridad de contraseña
+        // 3. Validación de seguridad de contraseña (¡CORREGIDO Y SINCRONIZADO!)
         if (!isPasswordSecure(password)) {
-            setError('La contraseña debe tener al menos 8 caracteres (y otros requisitos de seguridad).');
+            // Mensaje más descriptivo para el usuario
+            setError('La contraseña no cumple con los requisitos: debe tener al menos 8 caracteres, incluyendo mayúsculas, minúsculas, números y símbolos.'); 
             setLoading(false);
             return;
         }
-
-        try {
-            // Llama a la ruta API que creaste: /api/auth/register
+try {
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: {
@@ -78,20 +88,37 @@ export default function RegistroComerciantePage() {
             // Procesa la respuesta de la API
             if (response.ok) {
                 // Criterio de Aceptación: Registro Exitoso y Redirección
-                const data = await response.json();
                 
-                // 🛑 CRÍTICO: LOG DE DEPURACIÓN (Busca esto en la Consola del navegador)
-                console.log('✅ Registro Exitoso.');
-                console.log('Rol enviado al BE:', role);
-                console.log('➡️ Redirección recibida del BE:', data.redirectPath); 
+                // CRÍTICO: Definimos un valor de redirección seguro por defecto
+                let data = { redirectPath: '/login' }; 
                 
-                // Usa la ruta de redirección que viene del backend (data.redirectPath)
+                try {
+                   // Intentamos leer el JSON. Si el body está vacío, esto fallará, 
+                   // pero NO detendrá la ejecución del bloque 'if'.
+                   data = await response.json();
+                } catch (e) {
+                    console.error('No se pudo leer el JSON de respuesta. Usando /login.', e);
+                    // Si falla, 'data' sigue siendo { redirectPath: '/login' }
+                }
+                
+                // ESTA LÍNEA ES LA CLAVE: Se ejecuta incondicionalmente después del 201
                 router.push(data.redirectPath || '/login'); 
                 
             } else {
-                // Manejar errores
-                const errorData = await response.text();
-                setError(errorData || 'Ocurrió un error en el registro.');
+                // Manejar errores (ej. "Este email ya está registrado" o "La contraseña no cumple...")
+                // Usamos response.json() si el backend devuelve un objeto JSON con un campo 'message', 
+                // o response.text() si devuelve solo el texto de error.
+                
+                let errorMessage = 'Ocurrió un error en el registro.';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+                } catch {
+                    // Si no es JSON, intenta obtener el texto
+                    errorMessage = await response.text() || errorMessage;
+                }
+                
+                setError(errorMessage);
             }
 
         } catch (err) {
@@ -118,7 +145,7 @@ export default function RegistroComerciantePage() {
 
             <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '15px' }}>
                 
-                {/* Nombre y Apellido */}
+                {/* Nombre */}
                 <input
                     type="text"
                     name="nombre"
@@ -128,6 +155,8 @@ export default function RegistroComerciantePage() {
                     required
                     style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px' }}
                 />
+                
+                {/* Apellido */}
                 <input
                     type="text"
                     name="apellido"

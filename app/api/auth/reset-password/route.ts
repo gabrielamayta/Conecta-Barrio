@@ -1,75 +1,57 @@
-import prisma from '@/lib/prisma';
-// Asegúrate de que esta ruta a tus utilidades sea correcta.
-// Necesitas la función hashPassword, que probablemente está en auth.utils.ts.
-import { hashPassword } from '@/lib/auth.utils'; 
 import { NextResponse } from 'next/server';
+import prisma from '@/lib/prisma'; // Asegúrate de que esta importación sea correcta
+import bcrypt from 'bcrypt';
 
-// Maneja la petición POST del formulario de restablecimiento
+// El tiempo de expiración del token debe ser el mismo que usaste en forgot-password (ej: 1 hora)
+const TOKEN_EXPIRATION_HOURS = 1; 
+
 export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { token, password } = body;
+    try {
+        const body = await request.json();
+        const { token, password } = body;
 
-    // 1. Validación de entrada
-    if (!token || !password || password.length < 8) {
-      return NextResponse.json(
-        { message: 'Token o contraseña inválida.' },
-        { status: 400 }
-      );
+        if (!token || !password) {
+            return NextResponse.json({ message: "Faltan datos requeridos." }, { status: 400 });
+        }
+
+        // 1. Buscar el token en la base de datos
+        const resetToken = await prisma.passwordResetToken.findUnique({
+            where: { token },
+            include: { user: true }, // Incluye la información del usuario
+        });
+
+        if (!resetToken || !resetToken.user) {
+            return NextResponse.json({ message: "Token inválido o ya ha sido usado." }, { status: 404 });
+        }
+
+        // 2. Verificar si el token ha expirado
+        const tokenExpiry = new Date(resetToken.createdAt.getTime() + TOKEN_EXPIRATION_HOURS * 60 * 60 * 1000);
+        if (new Date() > tokenExpiry) {
+            // Eliminar el token expirado
+            await prisma.passwordResetToken.delete({ where: { token } });
+            return NextResponse.json({ message: "El token ha expirado. Por favor, solicita un nuevo enlace." }, { status: 400 });
+        }
+
+        // 3. Hashear la nueva contraseña
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // 4. Actualizar la contraseña del usuario y eliminar el token
+        await prisma.$transaction([
+            // a) Actualizar el passwordHash del usuario
+            prisma.user.update({
+                where: { id: resetToken.userId },
+                data: { passwordHash: hashedPassword },
+            }),
+            // b) Eliminar el token de restablecimiento (para que no pueda ser reutilizado)
+            prisma.passwordResetToken.delete({
+                where: { token },
+            }),
+        ]);
+
+        return NextResponse.json({ message: "Contraseña restablecida con éxito." }, { status: 200 });
+
+    } catch (error) {
+        console.error("Error en POST /api/auth/reset-password:", error);
+        return NextResponse.json({ message: "Error interno del servidor." }, { status: 500 });
     }
-
-    // 2. Buscar el token en la base de datos
-    const resetToken = await prisma.passwordResetToken.findFirst({
-      where: {
-        token,
-        // La fecha de expiración debe ser mayor a la fecha actual
-        expiresAt: {
-          gt: new Date(), 
-        },
-      },
-    });
-
-    // 3. Verificar si el token es válido o ha expirado
-    if (!resetToken) {
-      // Usamos 400 para indicar un error de datos/token
-      return NextResponse.json(
-        { message: 'El enlace de restablecimiento es inválido o ha expirado.' },
-        { status: 400 }
-      );
-    }
-
-    // --- Proceso de Restablecimiento ---
-
-    // 4. Generar el hash de la nueva contraseña
-    // 🚨 Asegúrate de que 'hashPassword' esté implementado en auth.utils.ts y use bcrypt
-    const passwordHash = await hashPassword(password); 
-
-    // 5. Actualizar la contraseña del usuario
-    await prisma.user.update({
-      where: { id: resetToken.userId },
-      data: {
-        passwordHash: passwordHash,
-        updatedAt: new Date(),
-      },
-    });
-
-    // 6. Eliminar el token de restablecimiento para que no pueda ser reutilizado
-    await prisma.passwordResetToken.delete({
-      where: { id: resetToken.id },
-    });
-
-    // 7. Respuesta de éxito
-    return NextResponse.json(
-      { message: 'Contraseña restablecida con éxito.' },
-      { status: 200 }
-    );
-    
-  } catch (error) {
-    console.error('Error en reset-password API:', error);
-    // Error 500 para fallas de servidor, base de datos o lógica interna
-    return NextResponse.json(
-      { message: 'Error interno del servidor al procesar el restablecimiento.' },
-      { status: 500 }
-    );
-  }
 }

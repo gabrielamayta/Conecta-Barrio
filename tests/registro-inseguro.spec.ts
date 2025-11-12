@@ -30,11 +30,10 @@ test('Validación de Contraseña: Debe fallar si no cumple con requisitos mínim
 
   // 6. Criterio de Aceptación: Verificar el mensaje de error (Backend/Frontend)
   // El sistema debe mostrar el mensaje de error.
-  const errorMessage = 'La contraseña debe tener al menos 8 caracteres (y otros requisitos de seguridad).';
+  const expectedErrorMessage = "La contraseña no cumple con los requisitos: debe tener al menos 8 caracteres, incluyendo mayúsculas, minúsculas, números y símbolos"
   
   // Esperamos encontrar el texto de error en la página.
-  await expect(page.getByText(errorMessage)).toBeVisible();
-  
+  await expect(page.getByText(expectedErrorMessage)).toBeVisible();
   // Opcional: Afirmar que la URL NO cambió (sigue en registro)
   await expect(page).toHaveURL('http://localhost:3000/registro');
   

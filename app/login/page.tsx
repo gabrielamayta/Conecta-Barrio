@@ -1,16 +1,16 @@
 'use client'
 
-import type React from "react"
 import { useState } from "react"
 import { useRouter } from 'next/navigation';
-import Link from 'next/link'; // Necesario para el enlace de "Olvidaste tu contraseña"
+import Link from 'next/link'; 
+// Asumo que estos son componentes compartidos como shadcn/ui
 import { Button } from "@/components/ui/button" 
 import { Input } from "@/components/ui/input" 
 
-// Define la estructura de la respuesta del backend
+// Define la estructura de la respuesta de tu API de Login
 interface ApiResponse {
     message: string;
-    redirectPath?: string;
+    redirectPath?: string; 
     userId?: string;
     role?: string;
 }
@@ -53,11 +53,15 @@ export default function LoginPage() {
             const data: ApiResponse = await response.json();
 
             if (response.ok) {
-                // Redirección al dashboard o ruta de éxito
-                router.push(data.redirectPath || '/');
+                if (data.role && data.userId) {
+                    sessionStorage.setItem('userRole', data.role);
+                    sessionStorage.setItem('userId', data.userId);
+                }
+                
+                const path = data.redirectPath || '/';
+                router.push(path);
                 
             } else {
-                // Mensaje de error 
                 setError(data.message || 'Error desconocido. Inténtalo de nuevo.'); 
             }
 
@@ -70,21 +74,22 @@ export default function LoginPage() {
     };
     
     return (
-        <div className="min-h-screen bg-gradient-to-b from-[#B8E0E8] to-[#D4EEF3]">
-            <main className="container mx-auto px-4 py-12 flex items-center justify-center min-h-[calc(100vh-200px)]">
-                <div className="w-full max-w-md">
-                    <div className="bg-white rounded-lg shadow-lg p-8">
-                        <h1 className="text-3xl font-serif text-center mb-6">Iniciar Sesión</h1>
+        // CAMBIO: Añadir flex items-center justify-center
+        <div className="min-h-screen bg-gradient-to-b from-[#B8E0E8] to-[#D4EEF3] flex items-center justify-center">
+            <main className="container mx-auto px-4 py-12">
+                <div className="w-full max-w-md mx-auto"> 
+                    <div className="bg-white rounded-xl shadow-2xl p-8 transform transition-all hover:shadow-xl duration-300">
+                        
+                        <h1 className="text-3xl font-serif text-center mb-8 text-gray-800">Iniciar Sesión</h1>
                         
                         {error && (
-                            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-center">
+                            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center font-medium">
                                 {error}
                             </div>
                         )}
                         
                         <form onSubmit={handleSubmit} className="space-y-6">
                             
-                            {/* Input de Email */}
                             <div>
                                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
                                 <Input
@@ -96,10 +101,10 @@ export default function LoginPage() {
                                     onChange={handleChange}
                                     required
                                     disabled={loading}
+                                    className="rounded-lg h-10 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                                 />
                             </div>
 
-                            {/* Input de Contraseña */}
                             <div>
                                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">Contraseña</label>
                                 <Input
@@ -111,34 +116,34 @@ export default function LoginPage() {
                                     onChange={handleChange}
                                     required
                                     disabled={loading}
+                                    className="rounded-lg h-10 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                                 />
                             </div>
                             
-                            {/* ENLACE DE RECUPERACIÓN DE CONTRASEÑA */}
                             <div className="flex justify-end text-sm">
-                                <Link href="/forgot-password" passHref>
-                                    <span className="font-medium text-indigo-600 hover:text-indigo-800 cursor-pointer">
-                                        ¿Olvidaste tu contraseña?
-                                    </span>
+                                <Link 
+                                    href="/forgot-password" 
+                                    className="font-medium text-indigo-600 hover:text-indigo-800 transition-colors duration-200"
+                                >
+                                    ¿Olvidaste tu contraseña?
                                 </Link>
                             </div>
                         
                             <Button 
                                 type="submit" 
-                                className="w-full bg-black hover:bg-gray-800 text-white font-serif text-lg py-6"
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-lg py-3 rounded-lg transition-colors duration-200"
                                 disabled={loading}
                             >
                                 {loading ? 'Verificando...' : 'Iniciar Sesión'}
                             </Button>
                         </form>
 
-                        <p className="mt-4 text-center text-sm text-gray-600">
-                            ¿Aún no tienes cuenta? <a href="/registro" className="font-medium text-black hover:underline">Regístrate aquí</a>
+                        <p className="mt-6 text-center text-sm text-gray-600">
+                            ¿Aún no tienes cuenta? <Link href="/registro" className="font-medium text-indigo-600 hover:text-indigo-800">Regístrate aquí</Link>
                         </p>
                     </div>
                 </div>
             </main>
-
         </div>
     )
 }

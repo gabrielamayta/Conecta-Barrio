@@ -4,94 +4,57 @@ import { BusinessCard } from "@/components/business-card"
 import { Header } from "@/components/header"
 import { prisma } from "@/lib/prisma"
 
-// Negocios fijos que ya tenías
-const negociosFijos = [
-  {
-    id: 1,
-    nombre: "Indumentaria Hope",
-    descripcion: "Emprendedora: Marcela Velzaga",
-    telefono: "1151418997",
-    instagram: "indumentaria_hope1",
-    logo: "/hope.png",
-    tipo: "Indumentaria",
-  },
-  {
-    id: 2,
-    nombre: "Nails by Valen",
-    descripcion: "Manicurista: Valentina Mayta",
-    telefono: "1141466446",
-    instagram: "",
-    logo: "/manicuria.png",
-    tipo: "Manicurista",
-  },
-  {
-    id: 3,
-    nombre: "Kmili",
-    descripcion: "Pastelera: Camila Fernandez",
-    telefono: "1148889873",
-    instagram: "cookieskmill",
-    logo: "/kmill.png",
-    tipo: "Pastelería y Confitería",
-  },
-  {
-    id: 4,
-    nombre: "Fredy Burgoa",
-    descripcion: "Modelista y Vendedor de Plotters",
-    telefono: "1139055160",
-    instagram: "fredy_burgoa",
-    logo: "/modelista.png",
-    tipo: "Modelista",
-  },
-]
-
-// Función para obtener comerciantes de la base de datos
-async function getComerciantesRegistrados() {
+// Función para obtener TODOS los negocios y servicios aprobados
+async function getTodosLosNegocios() {
   try {
+    // Obtener comerciantes aprobados
     const comerciantes = await prisma.comercianteProfile.findMany({
-      where: {
-        aprobado: true
-      },
-      include: {
-        user: {
-          select: {
-            nombre: true,
-            apellido: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
+      where: { aprobado: true },
+      orderBy: { createdAt: 'desc' }
     });
 
-    return comerciantes.map((comerciante, index) => {
-      let logo = "/default-business.png";
-      
-      if (comerciante.nombreNegocio === "Gabu Makeup" || comerciante.usuario === "gabumakeup53wz") {
-        logo = "/gabu.makeup.png";
-      } else if (comerciante.nombreNegocio === "Lo de Mar") {
-        logo = "/kiosko.png"; 
-      }
-      
-      return {
-        id: 1000 + index,
-        nombre: comerciante.nombreNegocio,
-        descripcion: comerciante.descripcion,
-        telefono: comerciante.telefono,
-        instagram: comerciante.usuario,
-        logo: logo,
-        tipo: comerciante.categoria,
-      };
+    // Obtener profesionales aprobados
+    const profesionales = await prisma.profesionalProfile.findMany({
+      where: { aprobado: true },
+      orderBy: { createdAt: 'desc' }
     });
+
+    // Convertir comerciantes - AGREGAR esServicio: false
+    const comerciantesFormateados = comerciantes.map((comerciante, index) => ({
+      id: 1000 + index,
+      nombre: comerciante.nombreNegocio,
+      descripcion: comerciante.descripcion,
+      telefono: comerciante.telefono,
+      instagram: comerciante.usuario,
+      logo: "/default-business.png",
+      tipo: comerciante.categoria,
+      esNuevo: true,
+      esServicio: false // ← AGREGAR ESTO
+    }));
+
+    // Convertir profesionales - YA TIENE esServicio: true
+    const profesionalesFormateados = profesionales.map((profesional, index) => ({
+      id: 2000 + index,
+      nombre: profesional.nombreServicio,
+      descripcion: profesional.descripcion,
+      telefono: profesional.telefono,
+      instagram: profesional.usuario,
+      logo: "/default-service.png",
+      tipo: profesional.categoria,
+      esNuevo: true,
+      esServicio: true // ← YA ESTÁ ESTO
+    }));
+
+    return [...comerciantesFormateados, ...profesionalesFormateados];
+    
   } catch (error) {
-    console.error('Error obteniendo comerciantes:', error);
+    console.error('Error obteniendo negocios:', error);
     return [];
   }
 }
 
 export default async function HomePage() {
-  const comerciantesRegistrados = await getComerciantesRegistrados();
-  const todosLosNegocios = [...negociosFijos, ...comerciantesRegistrados];
+  const negociosRegistrados = await getTodosLosNegocios();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#B8E0E8] to-[#D4EEF3]">
@@ -106,19 +69,8 @@ export default async function HomePage() {
               </Link>
             </li>
             <li>
-              <Link
-                href="/#servicios"
-                className="font-serif text-lg text-gray-800 hover:text-gray-900 transition-colors"
-              >
-                Servicios
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/#comercios"
-                className="font-serif text-lg text-gray-800 hover:text-gray-900 transition-colors"
-              >
-                Comercios
+              <Link href="/registro" className="font-serif text-lg text-gray-800 hover:text-gray-900 transition-colors">
+                Registrarse
               </Link>
             </li>
             <li>
@@ -131,37 +83,49 @@ export default async function HomePage() {
       </nav>
 
       <main className="container mx-auto px-4 py-12">
-        {/* Sección de Comercios */}
-        <div id="comercios" className="mb-12">
+        {/* Sección de Comercios y Servicios */}
+        <div className="mb-12">
           <h2 className="text-3xl font-serif text-center mb-8 text-gray-800">
             Comercios y Servicios del Barrio
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {todosLosNegocios.map((negocio) => {
-              const esNuevo = typeof negocio.id === 'number' && negocio.id >= 1000;
-              
-              return (
+          {negociosRegistrados.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-600 text-lg mb-4">Aún no hay comercios o servicios registrados.</p>
+              <p className="text-gray-500">¡Sé el primero en registrarte!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {negociosRegistrados.map((negocio) => (
                 <div key={negocio.id} className="relative">
                   <BusinessCard negocio={negocio} />
-                  {esNuevo && (
+                  
+                  {/* Etiqueta "NUEVO" */}
+                  {negocio.esNuevo && (
                     <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
                       NUEVO
                     </div>
                   )}
+                  
+                  {/* Etiqueta "SERVICIO" para profesionales - AHORA SEGURO QUE EXISTE */}
+                  {negocio.esServicio && (
+                    <div className="absolute -top-2 -left-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      SERVICIO
+                    </div>
+                  )}
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* SECCIÓN DE REGISTRO UNIFICADO */}
+        {/* Llamado a la acción */}
         <div className="text-center bg-white/50 rounded-lg p-8 border border-[#7AB8C4]">
           <h3 className="text-2xl font-serif mb-4 text-gray-800">
             ¿Tienes un negocio o ofreces servicios?
           </h3>
-          <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-            Únete a nuestra comunidad como comerciante o profesional. Llega a más vecinos y haz crecer tu emprendimiento.
+          <p className="text-gray-600 mb-6">
+            Únete a nuestra comunidad y aparece automáticamente aquí.
           </p>
           <Link href="/registro">
             <Button size="lg" className="bg-[#28a745] hover:bg-[#218838] text-white font-serif text-lg px-8 py-6">

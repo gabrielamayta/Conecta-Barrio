@@ -1,5 +1,4 @@
 "use client"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -42,6 +41,7 @@ export function UnifiedRegistrationForm() {
     nombre: "",
     apellido: "",
     password: "",
+    confirmPassword: "", // ✅ AGREGADO
     telefono: "",
     
     // Datos específicos
@@ -58,6 +58,13 @@ export function UnifiedRegistrationForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validación frontend de contraseñas
+    if (formData.password !== formData.confirmPassword) {
+      alert("Las contraseñas no coinciden")
+      return
+    }
+    
     setIsLoading(true)
 
     try {
@@ -65,6 +72,8 @@ export function UnifiedRegistrationForm() {
         ...formData,
         userType
       }
+
+      console.log('Enviando datos:', payload) // Para debug
 
       const response = await fetch("/api/auth/register", {
         method: "POST",
@@ -75,7 +84,7 @@ export function UnifiedRegistrationForm() {
       })
 
       if (response.ok) {
-        router.push("/registro-exitoso")
+        router.push("/login")
       } else {
         const error = await response.json()
         alert(error.error || "Error en el registro")
@@ -282,6 +291,7 @@ export function UnifiedRegistrationForm() {
           />
         </div>
 
+        {/* SECCIÓN DE CONTRASEÑAS - CORREGIDA */}
         <div className="space-y-2">
           <Label htmlFor="password">Contraseña *</Label>
           <Input
@@ -290,6 +300,19 @@ export function UnifiedRegistrationForm() {
             value={formData.password}
             onChange={(e) => updateFormData("password", e.target.value)}
             required
+            placeholder="Mínimo 8 caracteres con mayúsculas, números y símbolos"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword">Confirmar Contraseña *</Label>
+          <Input
+            id="confirmPassword"
+            type="password"
+            value={formData.confirmPassword}
+            onChange={(e) => updateFormData("confirmPassword", e.target.value)}
+            required
+            placeholder="Repite tu contraseña"
           />
         </div>
 

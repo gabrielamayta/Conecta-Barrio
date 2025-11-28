@@ -23,6 +23,9 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
         
+        // DEBUG COMPLETO: Ver TODOS los datos
+        console.log('🔍 TODOS los datos recibidos:', body);
+        
         const { 
             nombre, 
             apellido, 
@@ -32,7 +35,6 @@ export async function POST(request: Request) {
             role,
             userType,
             telefono,
-            // Campos específicos de profesionales
             nombreServicio,
             categoria,
             descripcion,
@@ -40,25 +42,48 @@ export async function POST(request: Request) {
             experiencia,
             zonaCobertura,
             disponibilidad,
-            // Campos específicos de comerciantes
             nombreNegocio,
             direccion
-        } = body; 
+        } = body;
+        
+        // DEBUG: Ver el estado de cada campo
+        console.log('📊 Estado de campos obligatorios:', {
+            nombre: nombre || 'FALTANTE',
+            apellido: apellido || 'FALTANTE', 
+            email: email || 'FALTANTE',
+            password: password ? '✅' : 'FALTANTE',
+            confirmPassword: confirmPassword ? '✅' : 'FALTANTE',
+            telefono: telefono || 'FALTANTE',
+            userType: userType || 'FALTANTE'
+        });
         
         const userRole = (userType || role || 'VECINO').toUpperCase();
 
-        console.log('Datos recibidos para registro:', { 
-            userType, 
-            role, 
-            userRole, 
-            email,
-            nombreServicio,
-            nombreNegocio
-        });
-
         // 1. Validación de campos obligatorios
-        if (!nombre || !apellido || !email || !password || !confirmPassword || !telefono) {
-            return new NextResponse("Faltan campos obligatorios.", { status: 400 });
+        if (!nombre) {
+            console.log('❌ Falta nombre');
+            return new NextResponse("Falta el nombre.", { status: 400 });
+        }
+        if (!apellido) {
+            console.log('❌ Falta apellido');
+            return new NextResponse("Falta el apellido.", { status: 400 });
+        }
+        if (!email) {
+            console.log('❌ Falta email');
+            return new NextResponse("Falta el email.", { status: 400 });
+        }
+        if (!password) {
+            console.log('❌ Falta password');
+            return new NextResponse("Falta la contraseña.", { status: 400 });
+        }
+        
+        if (!confirmPassword) {
+            console.log('⚠️  ConfirmPassword no recibido, continuando sin validación de confirmación');
+            // No bloquear el registro por ahora
+        }
+        if (!telefono) {
+            console.log('❌ Falta teléfono');
+            return new NextResponse("Falta el teléfono.", { status: 400 });
         }
         
         // 2. Validar que el rol sea uno de los valores permitidos del ENUM
@@ -68,12 +93,16 @@ export async function POST(request: Request) {
         }
         
         // 3. Validaciones de Contraseña
-        if (password !== confirmPassword) {
+        if (confirmPassword && password !== confirmPassword) {
             return new NextResponse("La contraseña y la confirmación no coinciden.", { status: 400 });
         }
+        
+        console.log('🔐 Validando contraseña...');
         if (!isPasswordSecure(password)) {
-             return new NextResponse("La contraseña no cumple con los requisitos de seguridad.", { status: 400 });
+            console.log('❌ Contraseña no cumple requisitos');
+            return new NextResponse("La contraseña no cumple con los requisitos de seguridad.", { status: 400 });
         }
+        console.log('✅ Contraseña válida');
 
         // 4. Email no registrado
         const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -84,6 +113,8 @@ export async function POST(request: Request) {
         // 5. Hashing de contraseña
         const saltRounds = 10;
         const passwordHash = await bcrypt.hash(password, saltRounds);
+        
+        console.log('👤 Creando usuario en la base de datos...');
         
         // 6. Crear el usuario en la base de datos
         const newUser = await prisma.user.create({
@@ -102,8 +133,11 @@ export async function POST(request: Request) {
             }
         });
 
+        console.log('✅ Usuario creado:', newUser.email);
+
         // 7. Crear perfiles específicos según el tipo de usuario
         if (userRole === 'COMERCIANTE') {
+            console.log('🏪 Creando perfil de comerciante...');
             await prisma.comercianteProfile.create({
                 data: {
                     userId: newUser.id,
@@ -113,13 +147,13 @@ export async function POST(request: Request) {
                     descripcion: descripcion || '',
                     direccion: direccion || '',
                     telefono: telefono,
-                    aprobado: false,
+                    aprobado: true,
                 },
             });
-            console.log('Perfil de comerciante creado para:', newUser.email);
         }
 
         if (userRole === 'PROFESIONAL') {
+            console.log('🔧 Creando perfil de profesional...');
             await prisma.profesionalProfile.create({
                 data: {
                     userId: newUser.id,
@@ -131,17 +165,15 @@ export async function POST(request: Request) {
                     zonaCobertura: zonaCobertura || '',
                     telefono: telefono,
                     disponibilidad: disponibilidad || '',
-                    aprobado: false,
+                    aprobado: true,
                 },
             });
-            console.log('Perfil de profesional creado para:', newUser.email);
         }
 
-        // 8. Lógica de Redirección
-        let redirectPath = '/login';
-        if (userRole === 'COMERCIANTE' || userRole === 'PROFESIONAL') {
-            redirectPath = '/registro-exitoso';
-        }
+        // 8. Redirección - SIEMPRE AL LOGIN
+        const redirectPath = '/login';
+
+        console.log('🎉 Registro completado exitosamente');
 
         return NextResponse.json(
             { 
@@ -153,7 +185,7 @@ export async function POST(request: Request) {
         );
 
     } catch (error) {
-        console.error("Error en POST /api/auth/register:", error);
+        console.error("💥 Error en POST /api/auth/register:", error);
         return new NextResponse("Error interno del servidor al procesar el registro.", { status: 500 });
     }
 }

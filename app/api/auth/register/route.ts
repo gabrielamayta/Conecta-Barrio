@@ -1,96 +1,159 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import bcrypt from 'bcrypt'; 
+import { prisma } from '@/lib/prisma';
 import { UserRole } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
-// Helper: Validación de seguridad de contraseña (ESTE ESTÁ CORRECTO)
 const isPasswordSecure = (password: string): boolean => {
-    // Criterio: 8 caracteres, mayúscula, minúscula, número, símbolo.
-    const minLength = 8;
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasDigit = /[0-9]/.test(password);
-    const hasSymbol = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasDigit = /[0-9]/.test(password);
+    const hasSymbol = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
 
-    return (
-        password.length >= minLength &&
-        hasUpperCase &&
-        hasLowerCase &&
-        hasDigit &&
-        hasSymbol
-    );
+    return (
+        password.length >= minLength &&
+        hasUpperCase &&
+        hasLowerCase &&
+        hasDigit &&
+        hasSymbol
+    );
 };
 
-// ===============================================
-// ROUTE HANDLER: POST
-// ===============================================
 export async function POST(request: Request) {
-    try {
-        const body = await request.json();
-        // AÑADIDO: Desestructuramos el campo 'role'
-        const { nombre, apellido, email, password, confirmPassword, role } = body; 
-        
-        // Convertir el rol a mayúsculas para asegurar que coincida con el ENUM
-        const userRole = role.toUpperCase(); 
+    try {
+        const body = await request.json();
+        
+        const { 
+            nombre, 
+            apellido, 
+            email, 
+            password, 
+            confirmPassword, 
+            role,
+            userType,
+            telefono,
+            // Campos específicos de profesionales
+            nombreServicio,
+            categoria,
+            descripcion,
+            usuario,
+            experiencia,
+            zonaCobertura,
+            disponibilidad,
+            // Campos específicos de comerciantes
+            nombreNegocio,
+            direccion
+        } = body; 
+        
+        const userRole = (userType || role || 'VECINO').toUpperCase();
 
-        // 1. Validación de campos obligatorios (incluyendo role)
-        if (!nombre || !apellido || !email || !password || !confirmPassword || !userRole) {
-            return new NextResponse("Faltan campos obligatorios.", { status: 400 });
-        }
-        
-        // 2. Validar que el rol sea uno de los valores permitidos del ENUM
-        const validRoles: UserRole[] = ['VECINO', 'COMERCIANTE', 'PROFESIONAL'];
-        if (!validRoles.includes(userRole as UserRole)) {
-            return new NextResponse("Rol de usuario inválido.", { status: 400 });
-        }
-        
-        // 3. Validaciones de Contraseña
-        if (password !== confirmPassword) {
-            return new NextResponse("La contraseña y la confirmación no coinciden.", { status: 400 });
-        }
-        if (!isPasswordSecure(password)) {
-             return new NextResponse("La contraseña no cumple con los requisitos de seguridad.", { status: 400 });
-        }
+        console.log('Datos recibidos para registro:', { 
+            userType, 
+            role, 
+            userRole, 
+            email,
+            nombreServicio,
+            nombreNegocio
+        });
 
-        // 4. Email no registrado
-        const existingUser = await prisma.user.findUnique({ where: { email } });
-        if (existingUser) {
-            return new NextResponse("Este email ya está registrado.", { status: 409 }); 
-        }
+        // 1. Validación de campos obligatorios
+        if (!nombre || !apellido || !email || !password || !confirmPassword || !telefono) {
+            return new NextResponse("Faltan campos obligatorios.", { status: 400 });
+        }
+        
+        // 2. Validar que el rol sea uno de los valores permitidos del ENUM
+        const validRoles: UserRole[] = ['VECINO', 'COMERCIANTE', 'PROFESIONAL'];
+        if (!validRoles.includes(userRole as UserRole)) {
+            return new NextResponse("Rol de usuario inválido.", { status: 400 });
+        }
+        
+        // 3. Validaciones de Contraseña
+        if (password !== confirmPassword) {
+            return new NextResponse("La contraseña y la confirmación no coinciden.", { status: 400 });
+        }
+        if (!isPasswordSecure(password)) {
+             return new NextResponse("La contraseña no cumple con los requisitos de seguridad.", { status: 400 });
+        }
 
-        // 5. Hashing de contraseña
-        const saltRounds = 10;
-        const passwordHash = await bcrypt.hash(password, saltRounds);
-        
-        // 6. Crear el usuario en la base de datos
-        const newUser = await prisma.user.create({
-            data: {
-                nombre,
-                apellido,
-                email,
-                passwordHash,
-                role: userRole as UserRole, // Usamos el rol que el usuario seleccionó
-            },
-            select: {
-                id: true,
-                email: true,
-                nombre: true,
-                role: true,
-            }
-        });
+        // 4. Email no registrado
+        const existingUser = await prisma.user.findUnique({ where: { email } });
+        if (existingUser) {
+            return new NextResponse("Este email ya está registrado.", { status: 409 }); 
+        }
 
-        // 7. Lógica de Redirección Condicional
-        
-        // 🚨 MODIFICACIÓN CRÍTICA PARA EL TEST DE REGISTRO
-        // Devolvemos 201 sin cuerpo JSON. Esto fuerza al frontend a usar su 
-        // fallback de redirección a /login cuando response.json() falla.
-        return new NextResponse(null, { 
-            status: 201,
-            headers: { 'Content-Type': 'application/json' }
-        }); 
+        // 5. Hashing de contraseña
+        const saltRounds = 10;
+        const passwordHash = await bcrypt.hash(password, saltRounds);
+        
+        // 6. Crear el usuario en la base de datos
+        const newUser = await prisma.user.create({
+            data: {
+                nombre,
+                apellido,
+                email,
+                passwordHash,
+                role: userRole as UserRole,
+            },
+            select: {
+                id: true,
+                email: true,
+                nombre: true,
+                role: true,
+            }
+        });
 
-    } catch (error) {
-        console.error("Error en POST /api/auth/register:", error);
-        return new NextResponse("Error interno del servidor al procesar el registro.", { status: 500 });
-    }
+        // 7. Crear perfiles específicos según el tipo de usuario
+        if (userRole === 'COMERCIANTE') {
+            await prisma.comercianteProfile.create({
+                data: {
+                    userId: newUser.id,
+                    usuario: usuario || '',
+                    nombreNegocio: nombreNegocio || '',
+                    categoria: categoria || 'Otros',
+                    descripcion: descripcion || '',
+                    direccion: direccion || '',
+                    telefono: telefono,
+                    aprobado: false,
+                },
+            });
+            console.log('Perfil de comerciante creado para:', newUser.email);
+        }
+
+        if (userRole === 'PROFESIONAL') {
+            await prisma.profesionalProfile.create({
+                data: {
+                    userId: newUser.id,
+                    usuario: usuario || '',
+                    nombreServicio: nombreServicio || '',
+                    categoria: categoria || 'OTROS',
+                    descripcion: descripcion || '',
+                    experiencia: experiencia || '',
+                    zonaCobertura: zonaCobertura || '',
+                    telefono: telefono,
+                    disponibilidad: disponibilidad || '',
+                    aprobado: false,
+                },
+            });
+            console.log('Perfil de profesional creado para:', newUser.email);
+        }
+
+        // 8. Lógica de Redirección
+        let redirectPath = '/login';
+        if (userRole === 'COMERCIANTE' || userRole === 'PROFESIONAL') {
+            redirectPath = '/registro-exitoso';
+        }
+
+        return NextResponse.json(
+            { 
+                message: "Usuario registrado exitosamente",
+                redirectPath: redirectPath,
+                user: newUser
+            },
+            { status: 201 }
+        );
+
+    } catch (error) {
+        console.error("Error en POST /api/auth/register:", error);
+        return new NextResponse("Error interno del servidor al procesar el registro.", { status: 500 });
+    }
 }

@@ -2,8 +2,10 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { BusinessCard } from "@/components/business-card"
 import { Header } from "@/components/header"
+import { prisma } from "@/lib/prisma"
 
-const negocios = [
+// Negocios fijos que ya tenías
+const negociosFijos = [
   {
     id: 1,
     nombre: "Indumentaria Hope",
@@ -42,7 +44,55 @@ const negocios = [
   },
 ]
 
-export default function HomePage() {
+// Función para obtener comerciantes de la base de datos
+async function getComerciantesRegistrados() {
+  try {
+    const comerciantes = await prisma.comercianteProfile.findMany({
+      where: {
+        aprobado: true
+      },
+      include: {
+        user: {
+          select: {
+            nombre: true,
+            apellido: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    return comerciantes.map((comerciante, index) => {
+      let logo = "/default-business.png";
+      
+      if (comerciante.nombreNegocio === "Gabu Makeup" || comerciante.usuario === "gabumakeup53wz") {
+        logo = "/gabu.makeup.png";
+      } else if (comerciante.nombreNegocio === "Lo de Mar") {
+        logo = "/kiosko.png"; 
+      }
+      
+      return {
+        id: 1000 + index,
+        nombre: comerciante.nombreNegocio,
+        descripcion: comerciante.descripcion,
+        telefono: comerciante.telefono,
+        instagram: comerciante.usuario,
+        logo: logo,
+        tipo: comerciante.categoria,
+      };
+    });
+  } catch (error) {
+    console.error('Error obteniendo comerciantes:', error);
+    return [];
+  }
+}
+
+export default async function HomePage() {
+  const comerciantesRegistrados = await getComerciantesRegistrados();
+  const todosLosNegocios = [...negociosFijos, ...comerciantesRegistrados];
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#B8E0E8] to-[#D4EEF3]">
       <Header />
@@ -81,22 +131,49 @@ export default function HomePage() {
       </nav>
 
       <main className="container mx-auto px-4 py-12">
-        <div id="comercios" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {negocios.map((negocio) => (
-            <BusinessCard key={negocio.id} negocio={negocio} />
-          ))}
+        {/* Sección de Comercios */}
+        <div id="comercios" className="mb-12">
+          <h2 className="text-3xl font-serif text-center mb-8 text-gray-800">
+            Comercios y Servicios del Barrio
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {todosLosNegocios.map((negocio) => {
+              const esNuevo = typeof negocio.id === 'number' && negocio.id >= 1000;
+              
+              return (
+                <div key={negocio.id} className="relative">
+                  <BusinessCard negocio={negocio} />
+                  {esNuevo && (
+                    <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      NUEVO
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="flex justify-center">
+        {/* SECCIÓN DE REGISTRO UNIFICADO */}
+        <div className="text-center bg-white/50 rounded-lg p-8 border border-[#7AB8C4]">
+          <h3 className="text-2xl font-serif mb-4 text-gray-800">
+            ¿Tienes un negocio o ofreces servicios?
+          </h3>
+          <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+            Únete a nuestra comunidad como comerciante o profesional. Llega a más vecinos y haz crecer tu emprendimiento.
+          </p>
           <Link href="/registro">
-            <Button size="lg" className="bg-black hover:bg-gray-800 text-white font-serif text-lg px-8 py-6">
-              Registrarme
+            <Button size="lg" className="bg-[#28a745] hover:bg-[#218838] text-white font-serif text-lg px-8 py-6">
+              Únete a la comunidad
             </Button>
           </Link>
         </div>
       </main>
 
-      <footer className="text-center py-6 text-gray-700 font-serif">© 2025 Conecta Barrio</footer>
+      <footer className="text-center py-6 text-gray-700 font-serif">
+        © 2025 Conecta Barrio
+      </footer>
     </div>
   )
 }

@@ -3,10 +3,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// 2. Configuración de la fuente de datos (Asegúrate que el provider sea el correcto)
+// 2. Configuración de la fuente de datos
 datasource db {
-  provider = "sqlite" // Asegúrate de que esto coincida con tu base de datos
-  url      = env("DATABASE_URL") 
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 // 3. ENUM para los perfiles
@@ -18,39 +18,63 @@ enum UserRole {
 
 // 4. MODELO User
 model User {
-  id            String   @id @default(uuid())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  // Campos del registro
-  email         String   @unique
-  nombre        String
-  apellido      String
-  
-  // Seguridad
-  passwordHash  String 
-  
-  // Perfil
-  role          UserRole  @default(VECINO) 
-  
-  // Relación con los tokens de restablecimiento de contraseña
-  passwordResetTokens PasswordResetToken[] 
-  
-  // Puedes añadir otras relaciones futuras aquí
-  // posts         Post[]
+  id                   String               @id @default(uuid())
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  email                String               @unique
+  nombre               String
+  apellido             String
+  passwordHash         String
+  role                 UserRole             @default(VECINO)
+  passwordResetTokens  PasswordResetToken[]
+  comercianteProfile   ComercianteProfile?
+  profesionalProfile   ProfesionalProfile?  // ← AGREGAR ESTA RELACIÓN
 }
 
-// 5. MODELO PasswordResetToken (PARA "Olvidaste tu contraseña")
+// 5. MODELO PasswordResetToken
 model PasswordResetToken {
-  id        String   @id @default(uuid()) // Identificador único del token en la DB
-  userId    String   // ID del usuario al que pertenece el token
-  token     String   @unique // El token de seguridad real que va en el enlace
-  expiresAt DateTime // La fecha y hora en que el token deja de ser válido
-  createdAt DateTime @default(now()) // Fecha de creación
-
-  // Relación con el modelo User
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Índice para optimizar búsquedas por ID de usuario
   @@index([userId])
+}
+
+// 6. MODELO ComercianteProfile
+model ComercianteProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  usuario       String   @unique
+  nombreNegocio String
+  categoria     String
+  descripcion   String
+  direccion     String
+  telefono      String
+  aprobado      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// 7. NUEVO MODELO: profesionalProfile (AGREGA ESTO)
+model ProfesionalProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  usuario         String   @unique
+  nombreServicio  String
+  categoria       String
+  descripcion     String
+  experiencia     String
+  zonaCobertura   String
+  telefono        String
+  disponibilidad  String
+  aprobado        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

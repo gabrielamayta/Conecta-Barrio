@@ -3,10 +3,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// 2. Configuración de la fuente de datos
+// 2. ✅ AGREGA ESTA SECCIÓN DE DATASOURCE (FALTABA)
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = "file:./dev.db"
 }
 
 // 3. ENUM para los perfiles
@@ -28,7 +28,7 @@ model User {
   role                 UserRole             @default(VECINO)
   passwordResetTokens  PasswordResetToken[]
   comercianteProfile   ComercianteProfile?
-  profesionalProfile   ProfesionalProfile?  // ← AGREGAR ESTA RELACIÓN
+  profesionalProfile   ProfesionalProfile?
 }
 
 // 5. MODELO PasswordResetToken
@@ -43,11 +43,12 @@ model PasswordResetToken {
   @@index([userId])
 }
 
-// 6. MODELO ComercianteProfile
+// 6. MODELO ComercianteProfile - ACTUALIZADO
 model ComercianteProfile {
   id            String   @id @default(cuid())
   userId        String   @unique
-  usuario       String   @unique
+  usuario       String   @unique  // ✅ USERNAME ALEATORIO
+  instagram     String?  // ✅ NUEVO: Instagram opcional
   nombreNegocio String
   categoria     String
   descripcion   String
@@ -56,15 +57,17 @@ model ComercianteProfile {
   aprobado      Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  logoUrl       String?
 
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// 7. NUEVO MODELO: profesionalProfile (AGREGA ESTO)
+// 7. MODELO ProfesionalProfile - ACTUALIZADO
 model ProfesionalProfile {
   id              String   @id @default(cuid())
   userId          String   @unique
-  usuario         String   @unique
+  usuario         String   @unique  // ✅ USERNAME ALEATORIO
+  instagram       String?  // ✅ NUEVO: Instagram opcional
   nombreServicio  String
   categoria       String
   descripcion     String
@@ -75,6 +78,7 @@ model ProfesionalProfile {
   aprobado        Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  logoUrl         String?
 
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

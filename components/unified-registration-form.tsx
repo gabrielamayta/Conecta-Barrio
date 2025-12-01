@@ -16,6 +16,7 @@ const categoriasComercio = [
   "Gastronomía",
   "Tecnología",
   "Farmacia",
+  "Vendedor de Plotters",
   "Otros"
 ]
 
@@ -27,6 +28,8 @@ const categoriasServicio = [
   "CONSTRUCCION",
   "LIMPIEZA",
   "CUIDADO_PERSONAL",
+  "PASTELERIA",
+  "MANICURIA",
   "OTROS"
 ]
 
@@ -34,6 +37,7 @@ export function UnifiedRegistrationForm() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [userType, setUserType] = useState<UserType>("VECINO")
+  const [logoFile, setLogoFile] = useState<File | null>(null)
   
   const [formData, setFormData] = useState({
     // Datos básicos para todos
@@ -41,7 +45,7 @@ export function UnifiedRegistrationForm() {
     nombre: "",
     apellido: "",
     password: "",
-    confirmPassword: "", // ✅ AGREGADO
+    confirmPassword: "",
     telefono: "",
     
     // Datos específicos
@@ -56,6 +60,12 @@ export function UnifiedRegistrationForm() {
     disponibilidad: ""
   })
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setLogoFile(e.target.files[0])
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -68,19 +78,25 @@ export function UnifiedRegistrationForm() {
     setIsLoading(true)
 
     try {
-      const payload = {
-        ...formData,
-        userType
+      // Crear FormData para enviar archivos
+      const formDataToSend = new FormData()
+      
+      // Agregar todos los campos del formulario
+      Object.entries(formData).forEach(([key, value]) => {
+        formDataToSend.append(key, value)
+      })
+      
+      // Agregar userType y logo si existe
+      formDataToSend.append('userType', userType)
+      if (logoFile) {
+        formDataToSend.append('logo', logoFile)
       }
 
-      console.log('Enviando datos:', payload) // Para debug
+      console.log('Enviando datos con logo:', logoFile ? 'SÍ' : 'NO')
 
       const response = await fetch("/api/auth/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        body: formDataToSend, // Usar FormData en lugar de JSON
       })
 
       if (response.ok) {
@@ -140,6 +156,21 @@ export function UnifiedRegistrationForm() {
                 required
                 placeholder="Ej: Calle Principal 123"
               />
+            </div>
+
+            {/* ✅ NUEVO CAMPO: Logo para Comerciante */}
+            <div className="space-y-2">
+              <Label htmlFor="logo">Logo del Comercio</Label>
+              <Input
+                id="logo"
+                type="file"
+                accept="image/*"
+                onChange={handleLogoChange}
+                className="cursor-pointer"
+              />
+              <p className="text-xs text-gray-500">
+                Formatos: JPG, PNG, WEBP. Tamaño máximo: 2MB
+              </p>
             </div>
           </>
         )
@@ -202,6 +233,21 @@ export function UnifiedRegistrationForm() {
                 required
               />
             </div>
+
+            {/* ✅ NUEVO CAMPO: Logo para Profesional */}
+            <div className="space-y-2">
+              <Label htmlFor="logo">Logo del Servicio (opcional)</Label>
+              <Input
+                id="logo"
+                type="file"
+                accept="image/*"
+                onChange={handleLogoChange}
+                className="cursor-pointer"
+              />
+              <p className="text-xs text-gray-500">
+                Muestra tu profesionalismo con un logo
+              </p>
+            </div>
           </>
         )
 
@@ -247,7 +293,10 @@ export function UnifiedRegistrationForm() {
                   ? "border-[#007bff] bg-blue-50"
                   : "border-gray-300 hover:border-gray-400"
               }`}
-              onClick={() => setUserType(type.value)}
+              onClick={() => {
+                setUserType(type.value)
+                setLogoFile(null) // Resetear logo al cambiar tipo
+              }}
             >
               <div className="font-semibold text-gray-800">{type.label}</div>
               <div className="text-xs text-gray-600 mt-1">{type.desc}</div>
@@ -291,7 +340,6 @@ export function UnifiedRegistrationForm() {
           />
         </div>
 
-        {/* SECCIÓN DE CONTRASEÑAS - CORREGIDA */}
         <div className="space-y-2">
           <Label htmlFor="password">Contraseña *</Label>
           <Input

@@ -19,30 +19,38 @@ async function getTodosLosNegocios() {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Convertir comerciantes - AGREGAR esServicio: false
+    // Convertir comerciantes - USANDO LOGOS REALES
     const comerciantesFormateados = comerciantes.map((comerciante, index) => ({
       id: 1000 + index,
       nombre: comerciante.nombreNegocio,
       descripcion: comerciante.descripcion,
       telefono: comerciante.telefono,
       instagram: comerciante.usuario,
-      logo: "/default-business.png",
+      logo: comerciante.logoUrl || "/default-business.png", // ✅ USA logoUrl SI EXISTE
       tipo: comerciante.categoria,
       esNuevo: true,
-      esServicio: false // ← AGREGAR ESTO
+      esServicio: false,
+      // ✅ AGREGAR CAMPOS PARA EL NUEVO BUSINESS-CARD
+      nombreNegocio: comerciante.nombreNegocio,
+      categoria: comerciante.categoria,
+      logoUrl: comerciante.logoUrl
     }));
 
-    // Convertir profesionales - YA TIENE esServicio: true
+    // Convertir profesionales - USANDO LOGOS REALES
     const profesionalesFormateados = profesionales.map((profesional, index) => ({
       id: 2000 + index,
       nombre: profesional.nombreServicio,
       descripcion: profesional.descripcion,
       telefono: profesional.telefono,
       instagram: profesional.usuario,
-      logo: "/default-service.png",
+      logo: profesional.logoUrl || "/default-service.png", // ✅ USA logoUrl SI EXISTE
       tipo: profesional.categoria,
       esNuevo: true,
-      esServicio: true // ← YA ESTÁ ESTO
+      esServicio: true,
+      // ✅ AGREGAR CAMPOS PARA EL NUEVO BUSINESS-CARD
+      nombreNegocio: profesional.nombreServicio, // Para profesionales usamos nombreServicio
+      categoria: profesional.categoria,
+      logoUrl: profesional.logoUrl
     }));
 
     return [...comerciantesFormateados, ...profesionalesFormateados];
@@ -122,7 +130,7 @@ export default async function HomePage() {
         {/* Llamado a la acción */}
         <div className="text-center bg-white/50 rounded-lg p-8 border border-[#7AB8C4]">
           <h3 className="text-2xl font-serif mb-4 text-gray-800">
-            ¿Tienes un negocio o ofreces servicios?
+            ¿Tienes un comercio o ofreces servicios?
           </h3>
           <p className="text-gray-600 mb-6">
             Únete a nuestra comunidad y aparece automáticamente aquí.

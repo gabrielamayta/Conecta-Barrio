@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input"; 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { getCurrentUserId, isAuthenticated } from '@/lib/session';
 
-// Simulación de un tipo de producto/servicio
+// ✅ INTERFAZ PRODUCT (ESTO FALTABA)
 interface Product {
   id: number;
   name: string;
@@ -15,15 +17,37 @@ interface Product {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [newProduct, setNewProduct] = useState({ name: '', description: '', price: '', imageUrl: '' });
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string>('');
 
+  // Verificar autenticación al cargar
+  useEffect(() => {
+    checkAuthentication();
+  }, []);
+
+  const checkAuthentication = () => {
+    if (!isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+    
+    const currentUserId = getCurrentUserId();
+    if (currentUserId) {
+      setUserId(currentUserId);
+    }
+  };
+
+  // Función para manejar el cambio en los inputs del nuevo producto
   const handleNewProductChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNewProduct(prev => ({ ...prev, [name]: value }));
   };
 
+  // Función para añadir un nuevo producto
   const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (newProduct.name && newProduct.description && newProduct.price && newProduct.imageUrl) {
@@ -33,6 +57,21 @@ export default function DashboardPage() {
     } else {
       alert('Por favor, rellena todos los campos del producto.');
     }
+  };
+
+  const handleLogout = () => {
+    // Aquí deberías limpiar la sesión
+    // removeUserFromLocalStorage(); // Si tienes esta función
+    router.push('/login');
+  };
+
+  const handleEditProfile = () => {
+    if (!userId) {
+      alert('Por favor, inicia sesión primero');
+      router.push('/login');
+      return;
+    }
+    router.push('/dashboard/edit-profile');
   };
 
   return (
@@ -48,6 +87,7 @@ export default function DashboardPage() {
           <Button 
             variant="outline" 
             className="text-[#3498DB] border-[#3498DB] hover:bg-[#E0F7FA]"
+            onClick={handleLogout}
           >
             Cerrar Sesión
           </Button>
@@ -151,30 +191,43 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* Sección de Gestión de Perfil - ACTUALIZADA */}
+        {/* Sección de Gestión de Perfil */}
         <section className="bg-white rounded-lg shadow-lg p-6">
           <h3 className="text-2xl font-serif text-[#2980B9] mb-6">Gestionar Perfil</h3>
+          
+          {/* Mostrar información del usuario */}
+          {userId && (
+            <div className="mb-4 p-3 bg-green-50 rounded border border-green-200">
+              <p className="text-sm text-green-700">
+                <strong>Usuario ID:</strong> {userId.substring(0, 8)}...
+              </p>
+            </div>
+          )}
+          
           <p className="text-gray-700 mb-4">
-            Administra la información pública de tu negocio que ven los vecinos en el directorio.
+            Administra la información pública de tu {userRole === 'COMERCIANTE' ? 'comercio' : 'servicio'}.
           </p>
+          
           <div className="bg-[#F0F8FF] rounded-md p-4 mb-6 border border-[#B8E0E8]">
-            <h4 className="font-semibold text-[#1F535D] mb-2">📋 Información que puedes editar:</h4>
+            <h4 className="font-semibold text-[#1F535D] mb-2">📋 Información editable:</h4>
             <ul className="list-disc pl-5 space-y-1 text-gray-700 text-sm">
-              <li>Nombre del negocio</li>
-              <li>Categoría y tipo de negocio</li>
-              <li>Descripción detallada de servicios</li>
-              <li>Dirección y ubicación exacta</li>
-              <li>Teléfono de contacto actualizado</li>
-              <li>Horarios de atención</li>
+              <li>Nombre {userRole === 'COMERCIANTE' ? 'del negocio' : 'del servicio'}</li>
+              <li>Categoría y tipo</li>
+              <li>Descripción detallada</li>
+              <li>{userRole === 'COMERCIANTE' ? 'Dirección del local' : 'Zona de cobertura'}</li>
+              <li>Teléfono de contacto</li>
+              <li>Información de contacto adicional</li>
             </ul>
           </div>
           
           <div className="flex gap-4">
-            <Link href="/dashboard/edit-profile">
-              <Button className="bg-[#3498DB] hover:bg-[#2980B9] text-white px-6">
-                ✏️ Editar Perfil
-              </Button>
-            </Link>
+            <Button 
+              onClick={handleEditProfile}
+              className="bg-[#3498DB] hover:bg-[#2980B9] text-white px-6"
+              disabled={!userId}
+            >
+              ✏️ Editar Perfil
+            </Button>
             
             <Button 
               variant="outline" 

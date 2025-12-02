@@ -1,18 +1,20 @@
 'use client'
-
 import { useState } from "react"
 import { useRouter } from 'next/navigation';
 import Link from 'next/link'; 
-// Asumo que estos son componentes compartidos como shadcn/ui
 import { Button } from "@/components/ui/button" 
 import { Input } from "@/components/ui/input" 
+import { saveUserToLocalStorage } from '@/lib/session';
 
-// Define la estructura de la respuesta de tu API de Login
+// Define la estructura CORRECTA basada en tu API
 interface ApiResponse {
     message: string;
-    redirectPath?: string; 
-    userId?: string;
-    role?: string;
+    user?: {  // ✅ user es opcional porque la API podría no devolverlo en caso de error
+        id: string;
+        email: string;
+        nombre: string;
+        role: string;
+    };
 }
 
 export default function LoginPage() {
@@ -52,17 +54,26 @@ export default function LoginPage() {
 
             const data: ApiResponse = await response.json();
 
-            if (response.ok) {
-                if (data.role && data.userId) {
-                    sessionStorage.setItem('userRole', data.role);
-                    sessionStorage.setItem('userId', data.userId);
+            if (response.ok && data.user) {
+                // ✅ GUARDA EL USUARIO COMPLETO EN LOCALSTORAGE
+                saveUserToLocalStorage(data.user);
+                
+                // ✅ GUARDA EN SESSIONSTORAGE SOLO SI LOS VALORES EXISTEN
+                if (data.user.role && data.user.id) {
+                    sessionStorage.setItem('userRole', data.user.role);
+                    sessionStorage.setItem('userId', data.user.id);
                 }
                 
-                const path = data.redirectPath || '/';
-                router.push(path);
+                // ✅ REDIRIGE SEGÚN EL ROL
+                if (data.user.role === 'COMERCIANTE' || data.user.role === 'PROFESIONAL') {
+                    router.push('/dashboard');
+                } else {
+                    router.push('/');
+                }
                 
             } else {
-                setError(data.message || 'Error desconocido. Inténtalo de nuevo.'); 
+                // Maneja errores de la API
+                setError(data.message || 'Credenciales incorrectas.'); 
             }
 
         } catch (err) {
@@ -74,7 +85,6 @@ export default function LoginPage() {
     };
     
     return (
-        // CAMBIO: Añadir flex items-center justify-center
         <div className="min-h-screen bg-gradient-to-b from-[#B8E0E8] to-[#D4EEF3] flex items-center justify-center">
             <main className="container mx-auto px-4 py-12">
                 <div className="w-full max-w-md mx-auto"> 

@@ -4,24 +4,12 @@ test('Flujo REAL de Olvidé Contraseña - Basado en comportamiento actual', asyn
     const testEmail = 'maytagabi765@gmail.com';
     const newPassword = 'NuevaContraseña123!';
 
-    // 1. Ir a login y encontrar el enlace
-    await page.goto('http://localhost:3000/login');
-    
-    // Verificar que estamos en login
+    await page.goto('http://localhost:3001/login')
     await expect(page.getByRole('button', { name: /iniciar sesión/i })).toBeVisible();
-    
-    // 2. Hacer clic en "Olvidé contraseña" (comportamiento actual: no redirige)
     await page.getByRole('link', { name: '¿Olvidaste tu contraseña?' }).click();
-    
-    // 3. Como no redirige, asumimos que muestra algo en la misma página
-    // Buscar formulario o modal de recuperación
     await page.waitForTimeout(2000);
-    
-    // Tomar screenshot para debug
     await page.screenshot({ path: 'forgot-password-behavior.png' });
-    
-    // 4. SI existe un formulario visible, probarlo
-    const emailInputs = page.locator('input[type="email"]');
+   const emailInputs = page.locator('input[type="email"]');
     const emailCount = await emailInputs.count();
     
     if (emailCount > 0) {
@@ -41,7 +29,7 @@ test('Flujo REAL de Olvidé Contraseña - Basado en comportamiento actual', asyn
     }
 
     // 5. Verificar que podemos usar el sistema de login normal
-    await page.goto('http://localhost:3000/login');
+    await page.goto('http://localhost:3001/login');
     await expect(page.getByRole('button', { name: /iniciar sesión/i })).toBeVisible();
     
     console.log('✅ Flujo básico verificado - La aplicación responde');

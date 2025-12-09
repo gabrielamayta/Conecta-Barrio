@@ -5,7 +5,7 @@ test('Flujo E2E: Restablecimiento de Contraseña y Login Exitoso - SIMPLIFICADO'
     const TEST_PASSWORD = 'Jungkook97@';
 
     // 1. Verificar que forgot-password funciona
-    await page.goto('http://localhost:3000/forgot-password');
+    await page.goto('http://localhost:3001/forgot-password');
     await expect(page.getByText(/olvidaste|contraseña|recuperación/i)).toBeVisible();
     
     // Solo si el formulario está visible, intentar enviarlo
@@ -17,7 +17,7 @@ test('Flujo E2E: Restablecimiento de Contraseña y Login Exitoso - SIMPLIFICADO'
     }
 
     // 2. Verificar que login funciona
-    await page.goto('http://localhost:3000/login');
+    await page.goto('http://localhost:3001/login');
     await page.locator('input[type="email"]').fill(TEST_EMAIL);
     await page.locator('input[type="password"]').fill(TEST_PASSWORD);
     await page.getByRole('button', { name: /iniciar sesión/i }).click();

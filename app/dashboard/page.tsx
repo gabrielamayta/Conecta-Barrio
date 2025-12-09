@@ -1,3 +1,4 @@
+// app/dashboard/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -5,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input"; 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getCurrentUserId, isAuthenticated } from '@/lib/session';
+import { getCurrentUserId, isAuthenticated, getUserFromLocalStorage } from '@/lib/session';
 
-// ✅ INTERFAZ PRODUCT (ESTO FALTABA)
+// ✅ INTERFAZ PRODUCT
 interface Product {
   id: number;
   name: string;
@@ -23,11 +24,21 @@ export default function DashboardPage() {
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string>('');
+  const [hasProfile, setHasProfile] = useState(false);
+  const [profileType, setProfileType] = useState<'comerciante' | 'profesional' | null>(null);
+  const [profileData, setProfileData] = useState<any>(null);
 
   // Verificar autenticación al cargar
   useEffect(() => {
     checkAuthentication();
   }, []);
+
+  // Cargar perfil cuando userId esté disponible
+  useEffect(() => {
+    if (userId) {
+      loadProfileStatus();
+    }
+  }, [userId]);
 
   const checkAuthentication = () => {
     if (!isAuthenticated()) {
@@ -38,6 +49,34 @@ export default function DashboardPage() {
     const currentUserId = getCurrentUserId();
     if (currentUserId) {
       setUserId(currentUserId);
+    }
+    
+    // Obtener rol del usuario
+    const user = getUserFromLocalStorage();
+    if (user?.role) {
+      setUserRole(user.role);
+    }
+  };
+
+  const loadProfileStatus = async () => {
+    if (!userId) return;
+    
+    try {
+      const response = await fetch(`/api/profile?userId=${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setHasProfile(data.hasProfile);
+        
+        if (data.comercianteProfile) {
+          setProfileType('comerciante');
+          setProfileData(data.comercianteProfile);
+        } else if (data.profesionalProfile) {
+          setProfileType('profesional');
+          setProfileData(data.profesionalProfile);
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar perfil:', error);
     }
   };
 
@@ -60,8 +99,7 @@ export default function DashboardPage() {
   };
 
   const handleLogout = () => {
-    // Aquí deberías limpiar la sesión
-    // removeUserFromLocalStorage(); // Si tienes esta función
+    localStorage.removeItem('user');
     router.push('/login');
   };
 
@@ -72,6 +110,15 @@ export default function DashboardPage() {
       return;
     }
     router.push('/dashboard/edit-profile');
+  };
+
+  const handleViewPublicProfile = () => {
+    if (profileData) {
+      alert(`URL del perfil público: /perfil/${profileData.usuario}`);
+      // router.push(`/perfil/${profileData.usuario}`);
+    } else {
+      alert('Primero debes crear tu perfil');
+    }
   };
 
   return (
@@ -96,7 +143,7 @@ export default function DashboardPage() {
 
       <main className="container mx-auto px-4 py-8">
         <h2 className="text-4xl font-serif text-center text-[#1F535D] mb-10">
-          Bienvenido a tu Panel de Control, Comerciante/Profesional
+          Bienvenido a tu Panel de Control, {userRole === 'COMERCIANTE' ? 'Comerciante' : 'Profesional'}
         </h2>
 
         {/* Sección de Gestión de Productos/Servicios */}
@@ -201,6 +248,17 @@ export default function DashboardPage() {
               <p className="text-sm text-green-700">
                 <strong>Usuario ID:</strong> {userId.substring(0, 8)}...
               </p>
+              <p className="text-sm text-green-700 mt-1">
+                <strong>Tipo:</strong> {userRole === 'COMERCIANTE' ? 'Comerciante' : 'Profesional'}
+              </p>
+              <p className="text-sm text-green-700 mt-1">
+                <strong>Estado del perfil:</strong> {hasProfile ? '✅ Creado' : '❌ Pendiente'}
+                {profileData?.aprobado !== undefined && (
+                  <span className={profileData.aprobado ? 'text-green-600' : 'text-amber-600'}>
+                    {profileData.aprobado ? ' (Aprobado)' : ' (Pendiente de aprobación)'}
+                  </span>
+                )}
+              </p>
             </div>
           )}
           
@@ -216,7 +274,13 @@ export default function DashboardPage() {
               <li>Descripción detallada</li>
               <li>{userRole === 'COMERCIANTE' ? 'Dirección del local' : 'Zona de cobertura'}</li>
               <li>Teléfono de contacto</li>
-              <li>Información de contacto adicional</li>
+              <li>Instagram (opcional)</li>
+              {userRole === 'PROFESIONAL' && (
+                <>
+                  <li>Experiencia</li>
+                  <li>Disponibilidad</li>
+                </>
+              )}
             </ul>
           </div>
           
@@ -226,16 +290,34 @@ export default function DashboardPage() {
               className="bg-[#3498DB] hover:bg-[#2980B9] text-white px-6"
               disabled={!userId}
             >
-              ✏️ Editar Perfil
+              {hasProfile ? '✏️ Editar Perfil' : '📝 Crear Perfil'}
             </Button>
             
             <Button 
               variant="outline" 
               className="border-[#3498DB] text-[#3498DB] hover:bg-[#E0F7FA]"
+              onClick={handleViewPublicProfile}
+              disabled={!hasProfile}
             >
               📊 Ver Perfil Público
             </Button>
           </div>
+
+          {/* Vista previa de información actual */}
+          {profileData && (
+            <div className="mt-6 p-4 bg-blue-50 rounded border border-blue-200">
+              <h4 className="font-semibold text-blue-800 mb-2">📋 Información actual:</h4>
+              <p className="text-sm text-blue-700">
+                <strong>Nombre:</strong> {profileData.nombreNegocio || profileData.nombreServicio}
+              </p>
+              <p className="text-sm text-blue-700">
+                <strong>Categoría:</strong> {profileData.categoria}
+              </p>
+              <p className="text-sm text-blue-700">
+                <strong>Teléfono:</strong> {profileData.telefono}
+              </p>
+            </div>
+          )}
         </section>
       </main>
 

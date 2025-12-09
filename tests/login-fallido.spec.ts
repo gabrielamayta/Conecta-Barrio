@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('test de login fallido', async ({ page }) => {
-  await page.goto('http://localhost:3000/');
+  await page.goto('http://localhost:3001/');
   await page.getByRole('listitem').filter({ hasText: 'Ingresar' }).click();
   await page.getByRole('textbox', { name: 'Email' }).fill('maytagabi765@gmail.com'); 
   await page.getByRole('textbox', { name: 'Contraseña' }).fill('Test123!dddd');

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('test de registro inseguro', async ({ page }) => {
-  await page.goto('http://localhost:3000/');
+  await page.goto('http://localhost:3001/');
   await page.getByRole('link', { name: 'Registrarse' }).click();
   await page.getByRole('textbox', { name: 'Nombre *' }).fill('antonella');
   await page.getByRole('textbox', { name: 'Apellido *' }).fill('gonzalez');

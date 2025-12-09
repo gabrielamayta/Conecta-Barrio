@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://localhost:3001';
 
 const VECINO_EMAIL = 'cielo@gmail.com'; 
 const VECINO_PASSWORD = 'Valen123@'; 
@@ -24,7 +24,7 @@ test('Login 2. Vecino: Debe iniciar sesión y redirigir a la página principal (
 // Usamos Promise.all para esperar el clic Y la redirección.
     await Promise.all([
     // 1. Espera la navegación a la URL Home (/)
-    page.waitForURL('http://localhost:3000/'), // BASE_URL es '/'
+    page.waitForURL('http://localhost:3001/'), // BASE_URL es '/'
     
     // 2. Ejecuta la acción que causa la navegación (hacer clic)
     // Asegura el clic forzado si el botón está deshabilitado momentáneamente.

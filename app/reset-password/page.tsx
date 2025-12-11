@@ -1,5 +1,5 @@
-export const dynamic = "force-dynamic";
 'use client'; 
+export const dynamic = "force-dynamic";
 
 import ResetPasswordForm from '@/components/ResetPasswordForm';
 import { useSearchParams } from 'next/navigation'; // Importa el hook para el cliente

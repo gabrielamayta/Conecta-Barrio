@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma'; // Asegúrate de que esta importación sea correcta
+import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 
 // El tiempo de expiración del token debe ser el mismo que usaste en forgot-password (ej: 1 hora)

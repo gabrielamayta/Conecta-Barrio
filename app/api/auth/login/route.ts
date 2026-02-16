@@ -8,7 +8,8 @@ export async function POST(request: Request) {
 
         // 1. Validaciones básicas
         if (!email || !password) {
-            return new NextResponse("Email y contraseña son obligatorios.", { status: 400 });
+            // ✅ CORRECCIÓN: Siempre devolver un JSON
+            return NextResponse.json({ message: "Email y contraseña son obligatorios." }, { status: 400 });
         }
 
         // 2. Buscar el usuario
@@ -25,13 +26,15 @@ export async function POST(request: Request) {
 
         // 3. Verificar si el usuario existe
         if (!user) {
-            return new NextResponse("Credenciales inválidas.", { status: 401 });
+            // ✅ CORRECCIÓN: Siempre devolver un JSON
+            return NextResponse.json({ message: "Credenciales inválidas." }, { status: 401 });
         }
 
         // 4. Verificar contraseña
         const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
         if (!isPasswordValid) {
-            return new NextResponse("Credenciales inválidas.", { status: 401 });
+            // ✅ CORRECCIÓN: Siempre devolver un JSON
+            return NextResponse.json({ message: "Credenciales inválidas." }, { status: 401 });
         }
 
         // 5. Login exitoso
@@ -47,6 +50,7 @@ export async function POST(request: Request) {
 
     } catch (error) {
         console.error("Error en POST /api/auth/login:", error);
-        return new NextResponse("Error interno del servidor", { status: 500 });
+        // ✅ CORRECCIÓN: Siempre devolver un JSON
+        return NextResponse.json({ message: "Error interno del servidor" }, { status: 500 });
     }
 }

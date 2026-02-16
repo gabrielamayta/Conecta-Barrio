@@ -52,6 +52,7 @@ export default function LoginPage() {
                 }), 
             });
 
+            // ✅ CORRECCIÓN: Primero obtenemos el JSON de la respuesta
             const data: ApiResponse = await response.json();
 
             if (response.ok && data.user) {
@@ -72,7 +73,7 @@ export default function LoginPage() {
                 }
                 
             } else {
-                // Maneja errores de la API
+                // ✅ Maneja errores de la API (ahora data siempre será un JSON válido)
                 setError(data.message || 'Credenciales incorrectas.'); 
             }
 

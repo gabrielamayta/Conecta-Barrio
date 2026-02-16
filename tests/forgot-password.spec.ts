@@ -4,7 +4,7 @@ test('Flujo REAL de Olvidé Contraseña - Basado en comportamiento actual', asyn
     const testEmail = 'maytagabi765@gmail.com';
     const newPassword = 'NuevaContraseña123!';
 
-    await page.goto('http://localhost:3001/login')
+    await page.goto('http://localhost:3000/login')
     await expect(page.getByRole('button', { name: /iniciar sesión/i })).toBeVisible();
     await page.getByRole('link', { name: '¿Olvidaste tu contraseña?' }).click();
     await page.waitForTimeout(2000);
@@ -29,7 +29,7 @@ test('Flujo REAL de Olvidé Contraseña - Basado en comportamiento actual', asyn
     }
 
     // 5. Verificar que podemos usar el sistema de login normal
-    await page.goto('http://localhost:3001/login');
+    await page.goto('http://localhost:3000/login');
     await expect(page.getByRole('button', { name: /iniciar sesión/i })).toBeVisible();
     
     console.log('✅ Flujo básico verificado - La aplicación responde');

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 test('editar perfil de profesional', async ({ page }) => {
-  await page.goto('http://localhost:3001/');
+  await page.goto('http://localhost:3000/');
   await page.getByRole('link', { name: 'Ingresar' }).click();
   await page.getByRole('textbox', { name: 'Email' }).click();
   await page.getByRole('textbox', { name: 'Email' }).fill('came@gmail.com');

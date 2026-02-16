@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 
 test('test', async ({ page }) => {
- await page.goto('http://localhost:3001/');
+ await page.goto('http://localhost:3000/');
  await page.getByRole('link', { name: 'Registrarse' }).click();
  await page.getByText('🔧 Profesional').click();
  await page.getByRole('textbox', { name: 'Nombre *' }).click();
@@ -52,7 +52,7 @@ test('test', async ({ page }) => {
  await page.getByRole('textbox', { name: 'Disponibilidad (opcional)' }).click();
  await page.getByRole('textbox', { name: 'Disponibilidad (opcional)' }).fill('lunes a viernes 9-17');
  await page.getByRole('button', { name: 'Completar Registro' }).click();
- await page.goto('http://localhost:3001/');
+ await page.goto('http://localhost:3000/');
  await page.getByText('Manicuria Luci').click();
    await expect(page.getByRole('heading', { name: 'Manicuria Luci' })).toBeVisible();
 

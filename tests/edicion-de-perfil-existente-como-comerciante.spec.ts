@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 test.describe('Edicion de perfil existente de comerciante', () => {
 test('El comerciante debe poder acceder a una seccióndonde pueda revisar y modificar toda la información de su perfil).', async ({ page }) => {
-  await page.goto('http://localhost:3001/');
+  await page.goto('http://localhost:3000/');
   await page.getByRole('link', { name: 'Ingresar' }).click();
   await page.getByRole('textbox', { name: 'Email' }).click();
   await page.getByRole('textbox', { name: 'Email' }).fill('valentinaa@gmail.com');

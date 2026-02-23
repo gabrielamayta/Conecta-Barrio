@@ -10,14 +10,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 type UserType = "VECINO" | "COMERCIANTE" | "PROFESIONAL"
 
 const categoriasComercio = [
-  "Kiosko",
+  "Kiosco",
   "Almacén", 
   "Indumentaria",
   "Gastronomía",
   "Tecnología",
   "Farmacia",
+  "Manicuria",
+  "Confiteria",
+  "Panaderia",
   "Vendedor de Plotters",
   "Otros"
+  
+
 ]
 
 const categoriasServicio = [

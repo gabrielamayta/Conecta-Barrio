@@ -3,7 +3,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// 2. ✅ AGREGA ESTA SECCIÓN DE DATASOURCE (FALTABA)
+// 2. Configuración de la base de datos (SQLite)
 datasource db {
   provider = "sqlite"
   url      = "file:./dev.db"
@@ -18,17 +18,17 @@ enum UserRole {
 
 // 4. MODELO User
 model User {
-  id                   String               @id @default(uuid())
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
-  email                String               @unique
-  nombre               String
-  apellido             String
-  passwordHash         String
-  role                 UserRole             @default(VECINO)
-  passwordResetTokens  PasswordResetToken[]
-  comercianteProfile   ComercianteProfile?
-  profesionalProfile   ProfesionalProfile?
+  id                  String                @id @default(uuid())
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  email               String                @unique
+  nombre              String
+  apellido            String
+  passwordHash        String
+  role                UserRole              @default(VECINO)
+  passwordResetTokens PasswordResetToken[]
+  comercianteProfile  ComercianteProfile?
+  profesionalProfile  ProfesionalProfile?
 }
 
 // 5. MODELO PasswordResetToken
@@ -43,12 +43,12 @@ model PasswordResetToken {
   @@index([userId])
 }
 
-// 6. MODELO ComercianteProfile - ACTUALIZADO
+// 6. MODELO ComercianteProfile
 model ComercianteProfile {
   id            String   @id @default(cuid())
   userId        String   @unique
-  usuario       String   @unique  // ✅ USERNAME ALEATORIO
-  instagram     String?  // ✅ NUEVO: Instagram opcional
+  usuario       String   @unique
+  instagram     String?
   nombreNegocio String
   categoria     String
   descripcion   String
@@ -59,15 +59,17 @@ model ComercianteProfile {
   updatedAt     DateTime @updatedAt
   logoUrl       String?
 
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relaciones
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imagenes      GaleriaImagen[] // <-- Esto conecta con la galería
 }
 
-// 7. MODELO ProfesionalProfile - ACTUALIZADO
+// 7. MODELO ProfesionalProfile
 model ProfesionalProfile {
   id              String   @id @default(cuid())
   userId          String   @unique
-  usuario         String   @unique  // ✅ USERNAME ALEATORIO
-  instagram       String?  // ✅ NUEVO: Instagram opcional
+  usuario         String   @unique
+  instagram       String?
   nombreServicio  String
   categoria       String
   descripcion     String
@@ -80,5 +82,20 @@ model ProfesionalProfile {
   updatedAt       DateTime @updatedAt
   logoUrl         String?
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Relaciones
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imagenes        GaleriaImagen[] // <-- Esto conecta con la galería
+}
+
+// 8. MODELO GaleriaImagen
+model GaleriaImagen {
+  id            String   @id @default(cuid())
+  url           String   // Ejemplo: /uploads/foto123.png
+  comercioId    String?
+  profesionalId String?
+  createdAt     DateTime @default(now())
+
+  // Relaciones inversas
+  comerciante   ComercianteProfile? @relation(fields: [comercioId], references: [id], onDelete: Cascade)
+  profesional   ProfesionalProfile? @relation(fields: [profesionalId], references: [id], onDelete: Cascade)
 }
